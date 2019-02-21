@@ -2,32 +2,20 @@ package depsolver;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
+import com.sun.org.apache.xpath.internal.operations.Bool;
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-
-class Package {
-  private String name;
-  private String version;
-  private Integer size;
-  private List<List<String>> depends = new ArrayList<>();
-  private List<String> conflicts = new ArrayList<>();
-
-  public String getName() { return name; }
-  public String getVersion() { return version; }
-  public Integer getSize() { return size; }
-  public List<List<String>> getDepends() { return depends; }
-  public List<String> getConflicts() { return conflicts; }
-  public void setName(String name) { this.name = name; }
-  public void setVersion(String version) { this.version = version; }
-  public void setSize(Integer size) { this.size = size; }
-  public void setDepends(List<List<String>> depends) { this.depends = depends; }
-  public void setConflicts(List<String> conflicts) { this.conflicts = conflicts; }
-}
+import java.util.Map;
 
 public class Main {
+
+
+
   public static void main(String[] args) throws IOException {
     TypeReference<List<Package>> repoType = new TypeReference<List<Package>>() {};
     List<Package> repo = JSON.parseObject(readFile(args[0]), repoType);
@@ -47,6 +35,12 @@ public class Main {
         System.out.printf("\n");
       }
     }
+
+
+    for(Map.Entry<Constraint, Boolean> entry: getConstraintsMap(constraints).entrySet())
+    {
+      System.out.println(entry.getKey().getPackageName() + " : " + entry.getValue() + " Version = " + entry.getKey().getPackageVersionNumber());
+    }
   }
 
   static String readFile(String filename) throws IOException {
@@ -54,5 +48,50 @@ public class Main {
     StringBuilder sb = new StringBuilder();
     br.lines().forEach(line -> sb.append(line));
     return sb.toString();
+  }
+
+  static HashMap<Constraint, Boolean> getConstraintsMap(List<String> constraints)
+  {
+    HashMap<Constraint, Boolean> returnConstraints = new HashMap<>();
+    for(String constraint: constraints)
+    {
+      Constraint newCons = new Constraint();
+      Boolean state = false;
+      String packageName = "";
+      String packageVersion = "";
+      for(int i =0; i < constraint.length(); i++)
+      {
+        char currentChar = constraint.charAt(i);
+
+        switch (currentChar)
+        {
+          case '+':
+            state = true;
+            break;
+
+          case '-':
+            state = false;
+            break;
+
+          case '=':
+            packageVersion = packageVersion +  constraint.charAt(i + 1);
+
+            //Break out of for loop
+            i = constraint.length();
+
+            break;
+
+          default:
+            packageName = packageName + currentChar;
+            break;
+        }
+      }
+
+      newCons.setPackageVersionNumber(packageVersion);
+      newCons.setPackageName(packageName);
+      returnConstraints.put(newCons, state);
+    }
+
+    return returnConstraints;
   }
 }
