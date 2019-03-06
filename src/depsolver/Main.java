@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
 public class Main {
 
 
@@ -36,11 +37,11 @@ public class Main {
       }
     }
 
+    Resolver resolver = new Resolver(constraints, repo);
 
-    for(Map.Entry<Constraint, Boolean> entry: getConstraintsMap(constraints).entrySet())
-    {
-      System.out.println(entry.getKey().getPackageName() + " : " + entry.getValue() + " Version = " + entry.getKey().getPackageVersionNumber());
-    }
+
+
+
   }
 
   static String readFile(String filename) throws IOException {
@@ -93,5 +94,91 @@ public class Main {
     }
 
     return returnConstraints;
+  }
+
+  /**
+   * Checks if the currentVersion is the "Operator" of the requiredVersion
+   * @param requiredVersion
+   * @param currentVersion
+   * @param comparatorConstraint
+   * @return
+   */
+  public static boolean haveCorrectVersion(String requiredVersion, String currentVersion, String comparatorConstraint)
+  {
+    String[] requiredVersionSplit = requiredVersion.split("\\.");
+    String[] currentVersionSplit = currentVersion.split("\\.");
+
+
+
+    boolean returnState = false;
+    for(int i = 0; i < currentVersionSplit.length; i++)
+    {
+
+      int e = i < currentVersionSplit.length ? Integer.parseInt(currentVersionSplit[i]): 0;
+      int j = i < requiredVersionSplit.length ? Integer.parseInt(requiredVersionSplit[i]): 0;
+
+      switch (comparatorConstraint)
+      {
+        case "=":
+          if (e == j)
+          {
+            returnState = true;
+          }else
+          {
+            returnState = false;
+          }
+          break;
+
+        case ">=":
+          if(e >= j)
+          {
+            returnState = true;
+          }else
+          {
+            returnState = false;
+          }
+          break;
+
+        case "<=":
+          if (e <= j)
+          {
+            returnState = true;
+          }else
+          {
+            returnState = false;
+          }
+          break;
+
+        case ">":
+          if (e > j)
+          {
+            returnState = true;
+          }else
+          {
+            returnState = false;
+          }
+          break;
+
+        case "<":
+          if (e < j)
+          {
+            returnState = true;
+          }else
+          {
+            returnState = false;
+          }
+          break;
+
+        default:
+          System.out.println("Unmatched constraint: " + comparatorConstraint);
+          returnState = false;
+
+
+      }
+    }
+
+
+
+    return returnState;
   }
 }
