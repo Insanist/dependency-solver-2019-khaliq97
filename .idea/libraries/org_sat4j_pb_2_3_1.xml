@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="org.sat4j.pb-2.3.1">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/org.sat4j.pb-2.3.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
