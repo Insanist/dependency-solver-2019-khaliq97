@@ -1,11 +1,9 @@
 package depsolver;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import com.sun.org.apache.xpath.internal.operations.Bool;
+import com.sun.org.apache.xpath.internal.operations.Mod;
 import org.sat4j.pb.tools.WeightedObject;
 
 import com.microsoft.z3.*;
@@ -20,56 +18,163 @@ public class Resolver {
     private Context context;
     private Solver solver;
 
-    BoolExpr finalExpr;
+    private List<Package> usedRepo;
+
+    List<BoolExpr> finalExpr;
+
+    private List<String> finalStatePackages;
 
 
     public Resolver(List<String> constraintsFile, List<Package> packagesFile)
     {
 
-        finalExpr
+        finalExpr = new ArrayList<>();
         constraints = constraintsFile;
         repo = packagesFile;
+        finalStatePackages = new ArrayList<>();
+        usedRepo = new ArrayList<>();
         context = new Context();
         solver = context.mkSolver();
 
 
+       /* for(Package p: getAllPackageVersions("B>=3.1"))
+        {
+            System.out.println(p.getName() + p.getVersion());
+        }*/
+
         resolve();
 
+        System.out.println("----------------------------");
+        getAllPackDepsAndCons();
+
+    }
+
+    public void getAllPackDepsAndCons()
+    {
+      for(String s: finalStatePackages)
+      {
+          System.out.println(s);
+      }
     }
 
 
     public void resolve()
     {
+
         for(String con: constraints)
         {
+            Character packageOperation = con.charAt(0);
 
-            List<Package> allCurrentPackages = new ArrayList<>();
-            //Only for INCLUDE CASE
-
-            BoolExpr implies = null;
-            for(Package p: repo)
+            switch (packageOperation)
             {
-                System.out.println("-------------------" + p.getName() + "-------------------");
-                List<BoolExpr> deps= getAllDependencyConstraints(p.getDepends());
-                BoolExpr conflicts = getAllConflictConstraints(p.getConflicts());
+                case '+':
 
-                deps.add(conflicts);
+                    String[] installPackageOperation = con.split("\\" + packageOperation);
 
-                BoolExpr depsAndCons = context.mkAnd(deps.toArray(new BoolExpr[deps.size()]));
+                    List<Package> allCurrentPackages = getAllPackageVersions(String.valueOf(installPackageOperation[1]));
+                    List<BoolExpr> includePackages = new ArrayList<>();
+                    List<BoolExpr> implyBoolExprs = new ArrayList<>();
 
-                BoolExpr packageBoolConst = context.mkBoolConst(p.getName() + "=" + p.getVersion());
 
-                implies = context.mkImplies(packageBoolConst, context.mkAnd(depsAndCons));
+                    for(Package p: allCurrentPackages)
+                    {
+                        BoolExpr curPackageBoolConst = context.mkBoolConst(p.getName() + "=" + p.getVersion());
+                        includePackages.add(curPackageBoolConst);
 
-                System.out.println(implies.toString());
+                        usedRepo.add(p);
+
+                        List<BoolExpr> implies  = getAllDependencyConstraints(p.getDepends());
+
+                        BoolExpr conflictExpr = getAllConflictConstraints(p.getConflicts());
+                        implies.add(conflictExpr);
+
+                        implyBoolExprs.add(context.mkImplies(curPackageBoolConst, context.mkAnd(implies.toArray(new BoolExpr[implies.size()]))));
+
+
+
+                        finalExpr.add(context.mkOr(includePackages.toArray(new BoolExpr[includePackages.size()])));
+                        finalExpr.add(context.mkOr(implyBoolExprs.toArray(new BoolExpr[implyBoolExprs.size()])));
+
+
+
+                    }
+
+                    break;
+
+
+                case '-':
+
+                    String[] packageUninstallOperation = con.split("\\" + (packageOperation));
+
+
+                    List<Package> _allCurrentPackages = getAllPackageVersions(String.valueOf(packageUninstallOperation));
+                    List<BoolExpr> excludePackagesExpr = new ArrayList<>();
+
+                    for(Package p: _allCurrentPackages)
+                    {
+                        usedRepo.add(p);
+                        BoolExpr curPackageBoolConst = context.mkBoolConst(p.getName() + "=" + p.getVersion());
+                        excludePackagesExpr.add(context.mkNot(curPackageBoolConst));
+                    }
+
+
+                    break;
+            }
+
+
+        }
+
+        for(Package p: repo)
+        {
+
+
+            if(!usedRepo.contains(p))
+            {
+                BoolExpr curPackageBoolConst = context.mkBoolConst(p.getName() + "=" + p.getVersion());
+
+                List<BoolExpr> implies  = getAllDependencyConstraints(p.getDepends());
+
+                BoolExpr conflictExpr = getAllConflictConstraints(p.getConflicts());
+                implies.add(conflictExpr);
+
+                finalExpr.add(context.mkImplies(curPackageBoolConst, context.mkAnd(implies.toArray(new BoolExpr[implies.size()]))));
+
 
             }
         }
 
 
+        for(BoolExpr b: finalExpr)
+        {
+            System.out.println(b.toString());
+        }
+        BoolExpr finalExprResult = context.mkAnd(finalExpr.toArray(new BoolExpr[finalExpr.size()]));
+       // System.out.println(finalExprResult.toString());
+        solver.add(finalExprResult);
+        if(solver.check() == Status.SATISFIABLE)
+        {
+            System.out.println("SOLUTION FOUND");
+
+            Model model = solver.getModel();
 
 
-      /*  BoolExpr constraintBoolExpr = getConstraintsBooleanExpression(constraints);
+            System.out.println(model.toString());
+
+            List<FuncDecl> dec = new ArrayList<>(Arrays.asList(model.getConstDecls()));
+            dec.forEach(d -> {
+                System.out.println(d.getName().toString() + " " + model.getConstInterp(d).getBoolValue());
+                System.out.println();
+
+                finalStatePackages.add(d.getName().toString());
+
+            });
+
+        }
+/*
+        List<BoolExpr> implies  = context.mkImplies(curPackageBoolConst, context.mkAnd(depsAndCons));
+
+
+        BoolExpr constraintBoolExpr = getConstraintsBooleanExpression(constraints);
 
         BoolExpr finalCNF = context.mkAnd(implies, constraintBoolExpr);
 
