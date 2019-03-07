@@ -2,10 +2,6 @@ package depsolver;
 
 import java.util.*;
 
-import com.sun.org.apache.xpath.internal.operations.Bool;
-import com.sun.org.apache.xpath.internal.operations.Mod;
-import org.sat4j.pb.tools.WeightedObject;
-
 import com.microsoft.z3.*;
 
 
@@ -13,7 +9,7 @@ public class Resolver {
 
 
     private List<String> constraints;
-    private List<Package> repo;
+   static private List<Package> repo;
 
     private Context context;
     private Solver solver;
@@ -22,7 +18,7 @@ public class Resolver {
 
     List<BoolExpr> finalExpr;
 
-    private List<String> finalStatePackages;
+    private List<FinalStatePackage> finalStatePackages;
 
 
     public Resolver(List<String> constraintsFile, List<Package> packagesFile)
@@ -47,13 +43,23 @@ public class Resolver {
         System.out.println("----------------------------");
         getAllPackDepsAndCons();
 
+        for(FinalStatePackage f: finalStatePackages)
+        {
+            FinalStatePackage finalStatePackage = f;
+            f.setDeps(finalStatePackages);
+            System.out.println(finalStatePackage.toString());
+
+        }
+
+
+
     }
 
     public void getAllPackDepsAndCons()
     {
-      for(String s: finalStatePackages)
+      for(FinalStatePackage s: finalStatePackages)
       {
-          System.out.println(s);
+          System.out.println(s.getPackageName() + " | " + s.getPackageVersionNumber());
       }
     }
 
@@ -165,7 +171,14 @@ public class Resolver {
                 System.out.println(d.getName().toString() + " " + model.getConstInterp(d).getBoolValue());
                 System.out.println();
 
-                finalStatePackages.add(d.getName().toString());
+
+                if(model.getConstInterp(d).getBoolValue().toInt() == 1)
+                {
+                    String[] packageNameVersionSplit = d.getName().toString().split("=");
+                    FinalStatePackage finalStatePackage = new FinalStatePackage(packageNameVersionSplit[0], packageNameVersionSplit[1]);
+                    finalStatePackages.add(finalStatePackage);
+                }
+
 
             });
 
@@ -183,6 +196,20 @@ public class Resolver {
 
 
 
+    }
+
+    public static Package getPackage(String packageName, String packageVersionNumber)
+    {
+        Package returnPackage = null;
+        for(Package p: repo)
+        {
+            if(p.getName().equals(packageName) && p.getVersion().equals(packageVersionNumber))
+            {
+                returnPackage = p;
+            }
+        }
+
+        return returnPackage;
     }
 
     public BoolExpr getConstraintsBooleanExpression(List<String> constraints)
@@ -283,6 +310,30 @@ public class Resolver {
 
         //System.out.println(context.mkOr(dps).toString());
         return context.mkOr(dps);
+    }
+
+    public static String getPackageComparator(String packageString)
+    {
+
+        String packageComparator = "";
+        if(packageString.contains(">="))
+        {
+            packageComparator = ">=";
+        }else if(packageString.contains("<="))
+        {
+            packageComparator = "<=";
+        }else if (packageString.contains("="))
+        {
+            packageComparator = "=";
+        }else if(packageString.contains(">"))
+        {
+            packageComparator = ">";
+        }else if(packageString.contains("<"))
+        {
+            packageComparator = "<";
+        }
+
+        return packageComparator;
     }
 
     public List<Package> getAllPackageVersions(String _package)
