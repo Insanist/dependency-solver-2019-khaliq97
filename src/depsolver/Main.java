@@ -2,15 +2,12 @@ package depsolver;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
-import com.sun.org.apache.xpath.internal.operations.Bool;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 
 public class Main {
@@ -51,12 +48,12 @@ public class Main {
     return sb.toString();
   }
 
-  static HashMap<Constraint, Boolean> getConstraintsMap(List<String> constraints)
+  static HashMap<FinalStatePackage, Boolean> getConstraintsMap(List<String> constraints)
   {
-    HashMap<Constraint, Boolean> returnConstraints = new HashMap<>();
+    HashMap<FinalStatePackage, Boolean> returnConstraints = new HashMap<>();
     for(String constraint: constraints)
     {
-      Constraint newCons = new Constraint();
+      FinalStatePackage newCons = new FinalStatePackage(null, null);
       Boolean state = false;
       String packageName = "";
       String packageVersion = "";
