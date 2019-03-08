@@ -1,6 +1,7 @@
 package depsolver;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 public class FinalStatePackage {
@@ -10,11 +11,12 @@ public class FinalStatePackage {
     private String packageVersionNumber;
 
 
-    public List<FinalStatePackage> getDeps() {
+    public List<HashSet<FinalStatePackage>> getDeps() {
         return deps;
     }
 
-    private List<FinalStatePackage> deps;
+    private List<HashSet<FinalStatePackage>> deps;
+    private HashSet<FinalStatePackage> dependents;
     private List<String> cons;
 
     public FinalStatePackage (String packageName, String packageVersionNumber)
@@ -24,6 +26,8 @@ public class FinalStatePackage {
 
         deps = new ArrayList<>();
         cons = new ArrayList<>();
+
+        dependents = new HashSet<>();
     }
 
     public String getPackageName() {
@@ -42,6 +46,11 @@ public class FinalStatePackage {
         this.packageVersionNumber = packageVersionNumber;
     }
 
+    public HashSet<FinalStatePackage> getDependents()
+    {
+        return dependents;
+    }
+
     public void setDeps(List<FinalStatePackage> finaleStatePackages)
     {
         Package p = Resolver.getPackage(packageName, packageVersionNumber);
@@ -52,9 +61,11 @@ public class FinalStatePackage {
         {
             FinalStatePackage finalStatePackage = null;
 
-            for(String innerDep: dep)
+            HashSet<FinalStatePackage> innerDep = new HashSet<>();
+
+            for(String innerDeps: dep)
             {
-                String[] innerDepSplit = innerDep.split(Resolver.getPackageComparator(innerDep));
+                String[] innerDepSplit = innerDeps.split(Resolver.getPackageComparator(innerDeps));
 
                // System.out.println(innerDep);
 
@@ -63,16 +74,18 @@ public class FinalStatePackage {
 
                     if(innerDepSplit.length == 1 && fsp.getPackageName().equals(innerDepSplit[0]))
                     {
-                        finalStatePackage = fsp;
+                        innerDep.add(fsp);
+                        fsp.getDependents().add(fsp);
                         break;
-                    }else if(fsp.getPackageName().equals(innerDepSplit[0]) && Main.haveCorrectVersion(innerDepSplit[1], fsp.getPackageVersionNumber(), Resolver.getPackageComparator(innerDep)))
+                    }else if(fsp.getPackageName().equals(innerDepSplit[0]) && Main.haveCorrectVersion(innerDepSplit[1], fsp.getPackageVersionNumber(), Resolver.getPackageComparator(innerDeps)))
                     {
-                        finalStatePackage = fsp;
+                        innerDep.add(fsp);
+                        fsp.getDependents().add(fsp);
                         break;
                     }
                 }
 
-                if(finalStatePackage != null)
+                if(!innerDep.isEmpty())
                 {
                     break;
                 }
@@ -80,18 +93,24 @@ public class FinalStatePackage {
 
             }
 
-            deps.add(finalStatePackage);
+            deps.add(innerDep);
 
         }
     }
 
+
     @Override
     public String toString(){
         String toPrint = "Package Name: " + this.packageName + " Package Version: " + this.packageVersionNumber + " Dependencies: {\n";
-        for(FinalStatePackage sat : deps){
-            String temp = "\t Package Name: " + sat.getPackageName() + " Version: " + sat.getPackageVersionNumber() + "\n";
-            toPrint = toPrint + temp;
+
+        for(HashSet<FinalStatePackage> outer: deps)
+        {
+            for(FinalStatePackage sat : outer){
+                String temp = "\t Package Name: " + sat.getPackageName() + " Version: " + sat.getPackageVersionNumber() + "\n";
+                toPrint = toPrint + temp;
+            }
         }
+
         toPrint = toPrint + "}";
         return toPrint;
     }
