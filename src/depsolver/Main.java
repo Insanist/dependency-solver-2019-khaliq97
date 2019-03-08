@@ -6,19 +6,21 @@ import com.alibaba.fastjson.TypeReference;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
 
 public class Main {
 
-
+  static List<Package> repo;
+  static  List<String> initial;
 
   public static void main(String[] args) throws IOException {
     TypeReference<List<Package>> repoType = new TypeReference<List<Package>>() {};
-    List<Package> repo = JSON.parseObject(readFile(args[0]), repoType);
+    repo = JSON.parseObject(readFile(args[0]), repoType);
     TypeReference<List<String>> strListType = new TypeReference<List<String>>() {};
-    List<String> initial = JSON.parseObject(readFile(args[1]), strListType);
+    initial = JSON.parseObject(readFile(args[1]), strListType);
     List<String> constraints = JSON.parseObject(readFile(args[2]), strListType);
 
     // CHANGE CODE BELOW:
@@ -34,7 +36,7 @@ public class Main {
       }
     }
 
-    Resolver resolver = new Resolver(constraints, repo);
+    Resolver resolver = new Resolver(constraints, repo, initial);
 
 
 
@@ -91,6 +93,52 @@ public class Main {
     }
 
     return returnConstraints;
+  }
+
+  public static List<FinalStatePackage> getFinalStatePackageList(List<Package> repo)
+  {
+    List<FinalStatePackage> fsps = new ArrayList<>();
+    HashMap<String, Package> repoHashMap = new HashMap<>();
+
+    for(String initialP: initial)
+    {
+      String temp = initialP.replace("+", "");
+      String[] packageInfo = temp.split("=");
+      fsps.add(new FinalStatePackage(packageInfo[0], packageInfo[1]));
+    }
+
+    for(FinalStatePackage fsp: fsps)
+    {
+      fsp.setDeps(fsps);
+    }
+
+    return fsps;
+  }
+
+  public static HashMap<String, FinalStatePackage> getHashMapRepo()
+  {
+    List<FinalStatePackage> fsps = new ArrayList<>();
+    HashMap<String, FinalStatePackage> repoHashMap = new HashMap<>();
+
+    for(String initialP: initial)
+    {
+      String temp = initialP.replace("+", "");
+      String[] packageInfo = temp.split("=");
+      fsps.add(new FinalStatePackage(packageInfo[0], packageInfo[1]));
+    }
+
+    HashMap<String, FinalStatePackage> hashedRepo = new HashMap<>();
+
+
+      for(FinalStatePackage fsp: fsps)
+      {
+        fsp.setDeps(fsps);
+        hashedRepo.put(fsp.getPackageName() + "=" + fsp.getPackageVersionNumber(), fsp);
+      }
+
+
+
+    return repoHashMap;
   }
 
   /**
