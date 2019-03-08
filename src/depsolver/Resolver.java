@@ -7,8 +7,8 @@ import com.microsoft.z3.*;
 
 public class Resolver {
 
-
     private List<String> constraints;
+    private List<String> initial;
    static private List<Package> repo;
 
     private Context context;
@@ -21,11 +21,12 @@ public class Resolver {
     private List<FinalStatePackage> finalStatePackages;
 
 
-    public Resolver(List<String> constraintsFile, List<Package> packagesFile)
+    public Resolver(List<String> constraintsFile, List<Package> packagesFile, List<String> initialFile)
     {
 
         finalExpr = new ArrayList<>();
         constraints = constraintsFile;
+        this.initial = initialFile;
         repo = packagesFile;
         finalStatePackages = new ArrayList<>();
         usedRepo = new ArrayList<>();
@@ -40,16 +41,9 @@ public class Resolver {
 
         resolve();
 
-        System.out.println("----------------------------");
-        getAllPackDepsAndCons();
+        Commands commands = new Commands(finalStatePackages, Main.getHashMapRepo());
 
-        for(FinalStatePackage f: finalStatePackages)
-        {
-            FinalStatePackage finalStatePackage = f;
-            f.setDeps(finalStatePackages);
-            System.out.println(finalStatePackage.toString());
-
-        }
+        commands.createCommandsList();
 
 
 
