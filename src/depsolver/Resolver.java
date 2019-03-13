@@ -8,7 +8,6 @@ import com.microsoft.z3.*;
 public class Resolver {
 
     private List<String> constraints;
-    private List<String> initial;
    static private List<Package> repo;
 
     private Context context;
@@ -21,12 +20,11 @@ public class Resolver {
     private List<FinalStatePackage> finalStatePackages;
 
 
-    public Resolver(List<String> constraintsFile, List<Package> packagesFile, List<String> initialFile)
+    public Resolver(List<String> constraintsFile, List<Package> packagesFile)
     {
 
         finalExpr = new ArrayList<>();
         constraints = constraintsFile;
-        this.initial = initialFile;
         repo = packagesFile;
         finalStatePackages = new ArrayList<>();
         usedRepo = new ArrayList<>();
@@ -39,26 +37,21 @@ public class Resolver {
             System.out.println(p.getName() + p.getVersion());
         }*/
 
-        resolve();
+      /*  resolve();
 
-        Commands commands = new Commands(finalStatePackages, Main.getHashMapRepo());
+        Commands commands = new Commands(repo, finalStatePackages, Main.getHashMapRepo());
 
-        commands.createCommandsList();
-
+        for(String command: commands.createCommandsList())
+        {
+            System.out.println(command);
+        }
+*/
 
 
     }
 
-    public void getAllPackDepsAndCons()
-    {
-      for(FinalStatePackage s: finalStatePackages)
-      {
-          System.out.println(s.getPackageName() + " | " + s.getPackageVersionNumber());
-      }
-    }
 
-
-    public void resolve()
+    public List<String> resolve()
     {
 
         for(String con: constraints)
@@ -144,52 +137,38 @@ public class Resolver {
         }
 
 
-        for(BoolExpr b: finalExpr)
-        {
-            System.out.println(b.toString());
-        }
+
         BoolExpr finalExprResult = context.mkAnd(finalExpr.toArray(new BoolExpr[finalExpr.size()]));
-       // System.out.println(finalExprResult.toString());
         solver.add(finalExprResult);
         if(solver.check() == Status.SATISFIABLE)
         {
-            System.out.println("SOLUTION FOUND");
 
             Model model = solver.getModel();
 
 
-            System.out.println(model.toString());
+
+            List<String> result = new ArrayList<>();
+
 
             List<FuncDecl> dec = new ArrayList<>(Arrays.asList(model.getConstDecls()));
             dec.forEach(d -> {
-                System.out.println(d.getName().toString() + " " + model.getConstInterp(d).getBoolValue());
-                System.out.println();
+              /*  System.out.println(d.getName().toString() + " " + model.getConstInterp(d).getBoolValue());
+                System.out.println();*/
 
 
                 if(model.getConstInterp(d).getBoolValue().toInt() == 1)
                 {
-                    String[] packageNameVersionSplit = d.getName().toString().split("=");
-                    FinalStatePackage finalStatePackage = new FinalStatePackage(packageNameVersionSplit[0], packageNameVersionSplit[1]);
-                    finalStatePackages.add(finalStatePackage);
+                    result.add(d.getName().toString());
+
                 }
 
 
             });
+            return result;
 
         }
-/*
-        List<BoolExpr> implies  = context.mkImplies(curPackageBoolConst, context.mkAnd(depsAndCons));
 
-
-        BoolExpr constraintBoolExpr = getConstraintsBooleanExpression(constraints);
-
-        BoolExpr finalCNF = context.mkAnd(implies, constraintBoolExpr);
-
-        System.out.println("FINAL CNF: ");
-        System.out.println(finalCNF);*/
-
-
-
+        return null;
     }
 
     public static Package getPackage(String packageName, String packageVersionNumber)
