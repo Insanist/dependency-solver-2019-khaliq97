@@ -1,6 +1,7 @@
 package depsolver;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.TypeReference;
 
 import java.io.BufferedReader;
@@ -25,7 +26,7 @@ public class Main {
 
     // CHANGE CODE BELOW:
     // using repo, initial and constraints, compute a solution and print the answer
-    for (Package p : repo) {
+   /* for (Package p : repo) {
       System.out.printf("package %s version %s\n", p.getName(), p.getVersion());
       for (List<String> clause : p.getDepends()) {
         System.out.printf("  dep:");
@@ -34,9 +35,30 @@ public class Main {
         }
         System.out.printf("\n");
       }
-    }
+    }*/
 
-    Resolver resolver = new Resolver(constraints, repo, initial);
+    Resolver resolver = new Resolver(constraints, repo);
+
+    List<String> finalState = resolver.resolve();
+
+    List<FinalStatePackage> finalStatePackages = getFinalStatePackageList(finalState);
+
+
+    HashMap<String, FinalStatePackage> hashedRepo = getHashMapRepo();
+
+    Commands commands = new Commands(hashedRepo, finalStatePackages, constraints);
+
+   /* finalState.forEach(f -> {
+      System.out.println(f);
+    });
+    finalStatePackages.forEach(f -> {
+      System.out.println(f.getPackageName());
+    });*/
+
+    JSONArray jsonArray = new JSONArray();
+    jsonArray.addAll(commands.createCommandsList());
+
+    System.out.println(jsonArray.toJSONString());
 
 
 
@@ -50,60 +72,14 @@ public class Main {
     return sb.toString();
   }
 
-  static HashMap<FinalStatePackage, Boolean> getConstraintsMap(List<String> constraints)
-  {
-    HashMap<FinalStatePackage, Boolean> returnConstraints = new HashMap<>();
-    for(String constraint: constraints)
-    {
-      FinalStatePackage newCons = new FinalStatePackage(null, null);
-      Boolean state = false;
-      String packageName = "";
-      String packageVersion = "";
-      for(int i =0; i < constraint.length(); i++)
-      {
-        char currentChar = constraint.charAt(i);
 
-        switch (currentChar)
-        {
-          case '+':
-            state = true;
-            break;
-
-          case '-':
-            state = false;
-            break;
-
-          case '=':
-            packageVersion = packageVersion +  constraint.charAt(i + 1);
-
-            //Break out of for loop
-            i = constraint.length();
-
-            break;
-
-          default:
-            packageName = packageName + currentChar;
-            break;
-        }
-      }
-
-      newCons.setPackageVersionNumber(packageVersion);
-      newCons.setPackageName(packageName);
-      returnConstraints.put(newCons, state);
-    }
-
-    return returnConstraints;
-  }
-
-  public static List<FinalStatePackage> getFinalStatePackageList(List<Package> repo)
+  public static List<FinalStatePackage> getFinalStatePackageList(List<String> finalState)
   {
     List<FinalStatePackage> fsps = new ArrayList<>();
-    HashMap<String, Package> repoHashMap = new HashMap<>();
 
-    for(String initialP: initial)
+    for(String p: finalState)
     {
-      String temp = initialP.replace("+", "");
-      String[] packageInfo = temp.split("=");
+      String[] packageInfo = p.split("=");
       fsps.add(new FinalStatePackage(packageInfo[0], packageInfo[1]));
     }
 
@@ -127,6 +103,10 @@ public class Main {
       fsps.add(new FinalStatePackage(packageInfo[0], packageInfo[1]));
     }
 
+    fsps.forEach(f -> {
+      f.getPackageName();
+    });
+
     HashMap<String, FinalStatePackage> hashedRepo = new HashMap<>();
 
 
@@ -138,7 +118,9 @@ public class Main {
 
 
 
-    return repoHashMap;
+
+
+    return hashedRepo;
   }
 
   /**
