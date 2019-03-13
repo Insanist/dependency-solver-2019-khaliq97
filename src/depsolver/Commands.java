@@ -1,36 +1,44 @@
 package depsolver;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 
 public class Commands {
 
-    private List<Package> repo;
     private List<FinalStatePackage> finalStates;
     private HashMap<String, FinalStatePackage> initial;
 
-    private HashSet<String> commandList;
+    private List<String> commandList;
 
-    public Commands(List<FinalStatePackage> finalState, HashMap<String, FinalStatePackage> initial)
+    private List<String> constraints;
+
+    public Commands( HashMap<String, FinalStatePackage> initial, List<FinalStatePackage> finalStates, List<String> constraints)
     {
-        this.repo = repo;
-        this.finalStates = finalState;
         this.initial = initial;
-        commandList = new HashSet<>();
+        this.finalStates = finalStates;
+        this.constraints = constraints;
+
+
+        commandList = new ArrayList<>();
+
+
+
 
     }
 
-    public void createCommandsList()
+    public List<String> createCommandsList()
     {
-
         for(FinalStatePackage finalStatePackage: finalStates)
         {
-            if(initial.containsKey(createInstallCommand(finalStatePackage)))
-            {
-                checkIfDepsInstalled(finalStatePackage);
-            }
+           // if(initial.containsKey(createInstallCommand(finalStatePackage)))
+            //{
+                boolean isRootMissing = checkIfDepsInstalledThenInstall(finalStatePackage);
+
+                if(!isRootMissing)
+                {
+                    initial.put(finalStatePackage.getPackageName() + "=" + finalStatePackage.getPackageVersionNumber(), finalStatePackage);
+                    commandList.add(createInstallCommand(finalStatePackage));
+                }
+            //}
         }
 
       /*  for(FinalStatePackage finalStatePackage: finalStates)
@@ -46,20 +54,39 @@ public class Commands {
             System.out.println(finalStatePackage.toString());*/
         //}
 
+        constraints.forEach(c ->{
+            initial.forEach((k, v) -> {
+
+            });
+        });
+
+        return commandList;
+
     }
 
-    public void checkIfDepsInstalled(FinalStatePackage finalStatePackage)
+    public boolean checkIfDepsInstalledThenInstall(FinalStatePackage finalStatePackage)
     {
         for(HashSet<FinalStatePackage> f: finalStatePackage.getDeps())
         {
             for(FinalStatePackage fsp: f)
             {
-                if(initial.containsKey(fsp.getPackageName() + "=" + fsp.getPackageVersionNumber()))
+                if(!initial.containsKey(fsp.getPackageName() + "=" + fsp.getPackageVersionNumber()))
                 {
-                    
+                    uninstallConflicts(fsp);
+                    initial.put(fsp.getPackageName() + "=" + fsp.getPackageVersionNumber(), fsp);
+                    commandList.add(createInstallCommand(fsp));
+
                 }
             }
 
+        }
+
+        if(initial.containsValue(finalStatePackage))
+        {
+            return true;
+        }else
+        {
+            return false;
         }
     }
 
@@ -78,15 +105,41 @@ public class Commands {
 
     public void uninstallConflicts(FinalStatePackage fsp)
     {
+        fsp.getCons().forEach(conflict -> {
+            String comp = Resolver.getPackageComparator(conflict);
+            if(comp.equals(""))
+            {
+                initial.forEach((k, v) -> {
+                    if(v.getPackageName().equals(conflict))
+                    {
+                        uninstallDeps(v);
+                    }
+                });
+            }else
+            {
+                String[] compSplit = conflict.split(comp);
+                initial.forEach((k, v) -> {
+
+                    if(v.getPackageName().equals(compSplit[0]) &&  Main.haveCorrectVersion(compSplit[1], v.getPackageVersionNumber(), comp))
+                    {
+                        uninstallDeps(v);
+                    }
+                });
+            }
+        });
+    }
+
+    public void uninstall(FinalStatePackage fsp, String conflict)
+
+    {
 
     }
 
     public void uninstallDeps(FinalStatePackage fsp)
     {
-        if(fsp.getDependents().size() < 0)
+        if(fsp.getDependents().isEmpty())
         {
             commandList.add(createUninstallCommand(fsp));
-            initial.remove(fsp.getPackageName() + "=" + fsp.getPackageVersionNumber());
         }else
         {
             for(FinalStatePackage finalStatePackage: fsp.getDependents())
@@ -94,23 +147,14 @@ public class Commands {
                 if(checkForOnlyDep(finalStatePackage, fsp))
                 {
                     uninstallDeps(fsp);
+
                 }
 
                 commandList.add(createUninstallCommand(fsp));
-                initial.remove(fsp.getPackageName() + "=" + fsp.getPackageVersionNumber());
+
             }
         }
     }
-
-    public String fixConflicts(FinalStatePackage p)
-    {
-
-
-
-
-        return "";
-    }
-
 
 
     public String createInstallCommand(FinalStatePackage p)
@@ -121,7 +165,7 @@ public class Commands {
 
     public String createUninstallCommand(FinalStatePackage p)
     {
-        return "+" + p.getPackageVersionNumber() + "=" + p.getPackageVersionNumber();
+        return "-" + p.getPackageName() + "=" + p.getPackageVersionNumber();
 
     }
 
