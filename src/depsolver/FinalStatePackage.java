@@ -17,6 +17,11 @@ public class FinalStatePackage {
 
     private List<HashSet<FinalStatePackage>> deps;
     private HashSet<FinalStatePackage> dependents;
+
+    public List<String> getCons() {
+        return cons;
+    }
+
     private List<String> cons;
 
     public FinalStatePackage (String packageName, String packageVersionNumber)
