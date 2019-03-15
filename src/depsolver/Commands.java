@@ -27,6 +27,14 @@ public class Commands {
 
     public List<String> createCommandsList()
     {
+
+        constraints.forEach(c ->{
+            if(c.contains("-"))
+            {
+                uninstall(c.replace("-", ""));
+            }
+        });
+
         for(FinalStatePackage finalStatePackage: finalStates)
         {
            // if(initial.containsKey(createInstallCommand(finalStatePackage)))
@@ -54,11 +62,7 @@ public class Commands {
             System.out.println(finalStatePackage.toString());*/
         //}
 
-        constraints.forEach(c ->{
-            initial.forEach((k, v) -> {
 
-            });
-        });
 
         return commandList;
 
@@ -105,8 +109,15 @@ public class Commands {
 
     public void uninstallConflicts(FinalStatePackage fsp)
     {
-        fsp.getCons().forEach(conflict -> {
-            String comp = Resolver.getPackageComparator(conflict);
+        fsp.getCons().forEach(p -> {
+            uninstall(p);
+        });
+    }
+
+    public void uninstall(String conflict)
+    {
+        String comp = Resolver.getPackageComparator(conflict);
+
             if(comp.equals(""))
             {
                 initial.forEach((k, v) -> {
@@ -126,13 +137,6 @@ public class Commands {
                     }
                 });
             }
-        });
-    }
-
-    public void uninstall(FinalStatePackage fsp, String conflict)
-
-    {
-
     }
 
     public void uninstallDeps(FinalStatePackage fsp)
