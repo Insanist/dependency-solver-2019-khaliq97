@@ -100,7 +100,7 @@ public class Resolver {
                     String[] packageUninstallOperation = con.split("\\" + (packageOperation));
 
 
-                    List<Package> _allCurrentPackages = getAllPackageVersions(String.valueOf(packageUninstallOperation));
+                    List<Package> _allCurrentPackages = getAllPackageVersions(String.valueOf(packageUninstallOperation[1]));
                     List<BoolExpr> excludePackagesExpr = new ArrayList<>();
 
                     for(Package p: _allCurrentPackages)
@@ -108,7 +108,10 @@ public class Resolver {
                         usedRepo.add(p);
                         BoolExpr curPackageBoolConst = context.mkBoolConst(p.getName() + "=" + p.getVersion());
                         excludePackagesExpr.add(context.mkNot(curPackageBoolConst));
+
                     }
+
+
 
 
                     break;
